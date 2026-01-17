@@ -1,7 +1,7 @@
 {
-  "name": "car-api",
+  "name": "house-api",
   "version": "1.0.0",
-  "description": "Car API",
+  "description": "House API",
   "type": "module",
   "scripts": {
     "mock-server": "tsx watch src/index.ts"
