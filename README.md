@@ -1,8 +1,14 @@
 # 06 Client side rendering
 
-Let's works with Nextjs using client side rendering.
+A Next.js house rental application demonstrating client-side rendering with React.
 
-We will start from `05-server-side-rendering`.
+This project showcases:
+- Client-side rendering with `'use client'` directive
+- House rental booking system
+- Search functionality
+- Image optimization
+- Spanish localization
+- Theme management with React Context
 
 # Steps to build it
 
@@ -31,7 +37,7 @@ import { House } from './house.api-model';
 
 const url = `${ENV.BASE_API_URL}/houses`;
 
-export const bookHouse = async (house: House): Promise<boolean> => {
+export const bookHouse = async (house: Partial<House> & { id: string; isBooked: boolean }): Promise<boolean> => {
   await fetch(`${url}/${house.id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -70,14 +76,18 @@ const handleBook = async () => {
 Run:
 
 ```bash
+npm start
+```
+
+This will start both the Next.js development server (port 3000) and the API server (port 3001).
+
+For production:
+
+```bash
 npm run start:api-server
 npm run build
 npm run start:prod
 ```
-
-> Check 404 on request `http://localhost:8080/houses/undefined/houses/1`
->
-> The `image url` is working because we are using the `mapper` in a Server Component.
 
 Why it doesn't work? Because we are using `use client` directive and the environment variable is only available on server side:
 
@@ -263,7 +273,7 @@ npm run build
 npm run start:prod
 ```
 
-Using theme:
+Using theme in navigation:
 
 _./src/pods/houses-list/components/nav.component.tsx_
 
@@ -279,16 +289,13 @@ interface Props {
 
 export const Nav: React.FC<Props> = (props) => {
   const { children, className } = props;
-  const { theme, onToggleThemeMode } = React.useContext(ThemeContext);
+  const { theme } = React.useContext(ThemeContext);
   return (
     <nav
       className={className}
       style={{ backgroundColor: theme.primary, color: theme.contrastText }}
     >
       {children}
-      <button style={{ marginLeft: 'auto' }} onClick={onToggleThemeMode}>
-        Toggle theme
-      </button>
     </nav>
   );
 };
@@ -337,25 +344,36 @@ export default HousesLayout;
 This project demonstrates client-side rendering in Next.js with a house rental application:
 
 - **API Server**: Mock API server running on port 3001 (`api-server/`)
+  - Package name: `house-api`
+  - Endpoints: `/api/houses` (GET), `/api/houses/:id` (GET), `/api/houses/:id` (PATCH)
 - **Frontend**: Next.js application with:
-  - House list page (`/houses`)
-  - House detail page (`/houses/[houseId]`)
-  - Theme context for dark/light mode toggle
+  - House list page (`/houses`) with search functionality
+  - House detail page (`/houses/[carId]`) with full house information
+  - Theme context for navigation styling
   - Client-side interactivity for booking houses
+  - Image optimization with Next.js Image component
+  - Spanish localization on detail page
 
 ### Key Features
 
 - Client-side rendering with `'use client'` directive
 - Environment variables for API configuration (`NEXT_PUBLIC_BASE_API_URL`)
-- React Context for theme management
+- React Context for theme management (used in navigation)
 - Data mapping between API models and view models
 - Server and Client Component separation
+- Search functionality (filters after 3 characters)
+- Image optimization (Next.js Image with AVIF/WebP support)
+- Booking system with visual feedback (icon changes)
+- Spanish localization on detail page
+- Responsive design
 
 ### Routes
 
 - `/` - Home page
-- `/houses` - House list (Server Component)
-- `/houses/[houseId]` - House details (Server Component with Client Component for interactivity)
+- `/houses` - House list (Server Component with Client Component for search)
+- `/houses/[carId]` - House details (Server Component with Client Component for interactivity)
+
+Note: The route parameter is `carId` because the folder is named `[carId]` (Next.js uses folder names for route parameters).
 
 ### Data Models
 
@@ -370,10 +388,88 @@ The application uses two data models:
 **View Model** (`house.vm.ts`):
 
 - Uses `imageUrl` (string) with full URL (includes BASE_PICTURES_URL)
-- Uses `features` (string[]) mapped from amenities
+- Uses `amenities` (string[]) - same as API model
 - Includes `isBooked` (boolean) for booking state
+- Includes all house details: `description`, `address`, `city`, `country`, `bedrooms`, `beds`, `bathrooms`, `price`, `reviews`
 
 The mappers (`house.mappers.ts` and `house-list.mappers.ts`) handle the transformation between these models.
+
+## Features
+
+### Search Functionality
+
+The house list page includes a search bar that filters houses by name:
+
+_./src/pods/houses-list/house-list.component.tsx_
+
+```typescript
+'use client';
+import React from 'react';
+
+export const HouseList: React.FC<Props> = (props) => {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const filteredHouses = React.useMemo(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery || trimmedQuery.length < 3) {
+      return houseList;
+    }
+    return houseList.filter((house) =>
+      house.name.toLowerCase().includes(trimmedQuery.toLowerCase())
+    );
+  }, [houseList, searchQuery]);
+
+  return (
+    <div>
+      <input
+        type="text"
+        placeholder="Search houses by name..."
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+      {/* Render filtered houses */}
+    </div>
+  );
+};
+```
+
+- Search activates after typing 3 or more characters
+- Case-insensitive matching
+- Real-time filtering as you type
+
+### Image Optimization
+
+Images are optimized using Next.js Image component:
+
+- **List view**: Lazy loading with quality 85
+- **Detail view**: Priority loading with quality 90
+- **Formats**: Automatic conversion to AVIF/WebP when supported
+- **Responsive**: Proper sizing for different screen sizes
+- **Fixed dimensions**: All images are 400x300px for consistency
+
+### Booking Functionality
+
+When you book a house:
+1. The booking status is updated via PATCH request
+2. You're redirected back to the house list
+3. The house icon changes from green checkmark (✓) to red cross (✗) to indicate it's reserved
+
+### Spanish Localization
+
+The house detail page displays all information in Spanish:
+- Dirección (Address)
+- Ciudad (City)
+- País (Country)
+- Dormitorios (Bedrooms)
+- Camas (Beds)
+- Baños (Bathrooms)
+- Precio (Price)
+- Comodidades (Amenities)
+- Reseñas (Reviews)
+
+### Back Button
+
+The detail page includes a back button ("← Volver a la lista") that navigates back to the house list.
 
 # About Basefactor + Lemoncode
 
